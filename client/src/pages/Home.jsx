@@ -64,7 +64,7 @@ export default function Home(){
 
                 {loading ? (
                     <div className="loading-text">Loading notes...</div>
-                ): notes.length === 0 ? (
+                ): notes?.length === 0 ? (
                     <div className="empty-state">
                         <h3>No notes match yet</h3>
                         <p>

@@ -23,7 +23,7 @@ export default function Register(){
     const handleSubmit = async (e) =>{
         e.preventDefault();
         setError("");
-        if(form.password.length<6){
+        if(form.password?.length<6){
             setError("Password must be at least 8 characters");
             return;
         }

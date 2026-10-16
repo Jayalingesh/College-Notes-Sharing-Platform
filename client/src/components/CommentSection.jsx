@@ -45,7 +45,7 @@ export default function CommentSection({ noteId, comments, onCommentAdded }) {
     return (
         <div>
             <h3 style={{ fontSize: 18, marginBottom: 14 }}>
-                Discussion {comments.length > 0 && `(${comments.length})`}
+                Discussion {comments?.length > 0 && `(${comments?.length})`}
             </h3>
 
             {user ? (
@@ -69,7 +69,7 @@ export default function CommentSection({ noteId, comments, onCommentAdded }) {
                 </p>
             )}
 
-            {comments.length === 0 ? (
+            {comments?.length === 0 ? (
                 <p style={{ fontSize: 14, color: "var(--ink-soft)" }}>
                     No comments yet — be the first.
                 </p>

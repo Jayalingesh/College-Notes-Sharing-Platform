@@ -38,9 +38,9 @@ export default function Dashboard(){
                     <div className="eyebrow">Your contributions</div>
                     <h1>My notes</h1>
 
-                    {notes.length > 0 && (
+                    {notes?.length > 0 && (
                         <p style={{ color: "var(--ink-soft)", fontSize: 14.5 }}>
-                            {notes.length} note{notes.length !== 1 ? "s" : ""} uploaded · {totalDownloads} total downloads
+                            {notes?.length} note{notes?.length !== 1 ? "s" : ""} uploaded · {totalDownloads} total downloads
                         </p>
                     )}
                 </div>
@@ -49,7 +49,7 @@ export default function Dashboard(){
 
                 {loading ? (
                     <div className="loading-text">Loading...</div>
-                ) : notes.length === 0 ? (
+                ) : notes?.length === 0 ? (
                     <div className="empty-state">
                         <h3>You haven't uploaded anything yet</h3>
                         <p>Share your notes and help other students out.</p>
