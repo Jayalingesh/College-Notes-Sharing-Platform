@@ -15,7 +15,7 @@ export default function Dashboard(){
         setLoading(true);
         try{
             const res = await api.get("/notes/mine/all");
-            setNotes(res.data.notes);
+            setNotes(res.data.notes || []);
         } catch(err){
             setError(err.response?.data?.message || "Could not load your notes");
         } finally{

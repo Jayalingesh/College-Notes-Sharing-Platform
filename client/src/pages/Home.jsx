@@ -39,7 +39,7 @@ export default function Home(){
             };
             Object.keys(params).forEach((k) => !params[k] && delete params[k]);
             const res = await api.get("/notes", { params });
-            setNotes(res.data.notes);
+            setNotes(res.data.notes || []);
             setTotalPages(res.data.totalPages);
             setTotalResults(res.data.totalResults);
         } catch(err){

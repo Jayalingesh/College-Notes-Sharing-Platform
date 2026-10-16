@@ -29,7 +29,7 @@ export default function NoteDetails(){
         setLoading(true);
         try{
             const res = await api.get((`/notes/${id}`));
-            setNote(res.data.note);
+            setNote(res.data.note || []);
             setComments(res.data.comments);
             setLikesCount(res.data.note.likes?.length || 0);
             setLiked(user ? res.data.note.likes?.includes(user.id) : false); 
