@@ -39,9 +39,11 @@ export default function Home(){
             };
             Object.keys(params).forEach((k) => !params[k] && delete params[k]);
             const res = await api.get("/notes", { params });
-            setNotes(res.data.notes || []);
-            setTotalPages(res.data.totalPages);
-            setTotalResults(res.data.totalResults);
+
+            const fetchNotes = res.data.notes || (Array.isArray(res.data) ? res.data : []);
+            setNotes(fetchNotes);
+            setTotalPages(res.data.totalPages || 1);
+            setTotalResults(res.data.totalResults || fetchNotes.length);
         } catch(err){
             setError(err.response?.data?.message || "Could not load notes");
         } finally{
