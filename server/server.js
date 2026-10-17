@@ -15,7 +15,7 @@ const app = express();
 
 app.use(
     cors({
-        origin: "https://college-notes-sharing-platform-drab.vercel.app/", 
+        origin: "https://college-notes-sharing-platform-drab.vercel.app", 
         credentials: true,
     })
 );
