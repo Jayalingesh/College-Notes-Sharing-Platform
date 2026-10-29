@@ -41,7 +41,7 @@ export default function NoteDetails(){
     };
 
     const handleDownload = () => {
-        window.open(`/api/notes/${id}/download`, "_blank");
+        window.open(`${api.defaults.baseURL}/notes/${id}/download`, "_blank");
         setNote((n) => ({ ...n, downloads: (n.downloads || 0) + 1 }));
     };
 
