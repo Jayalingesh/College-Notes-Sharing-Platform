@@ -4,6 +4,7 @@ const path = require("path");
 const Note = require("../models/Note");
 const User = require("../models/User");
 const Comment = require("../models/Comment");
+const { saveFile, findFile, openDownloadStream, deleteFile } = require("../utils/gridfs");
 
 // @desc Upload a new note
 // @route POST /api/notes
@@ -22,19 +23,27 @@ const createNote = asyncHandler(async (req, res) => {
         throw new Error("Title, subject, branch and semester are required");
     }
 
-    const note = await Note.create({
-        title,
-        description,
-        subject,
-        branch,
-        semester,
-        tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-        fileUrl: `/uploads/${req.file.filename}`,
-        fileName: req.file.originalname,
-        fileType: req.file.mimetype,
-        fileSize: req.file.size,
-        uploadedBy: req.user._id,
-    });
+    const fileId = await saveFile(req.file);
+
+    let note;
+    try {
+        note = await Note.create({
+            title,
+            description,
+            subject,
+            branch,
+            semester,
+            tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+            fileId,
+            fileName: req.file.originalname,
+            fileType: req.file.mimetype,
+            fileSize: req.file.size,
+            uploadedBy: req.user._id,
+        });
+    } catch (err) {
+        await deleteFile(fileId); // don't leave an orphan file behind
+        throw err;
+    }
 
     const populated = await note.populate("uploadedBy", "name college");
 
@@ -55,8 +64,8 @@ const getNotes = asyncHandler(async (req, res) => {
     }
 
     if(branch) query.branch = branch;
-    if(semester) query.semester = Number(semester);
-    if(subject) query.subject = new RegExp(subject, "i");
+    if(semester) query.semester = semester;
+    if(subject) query.subject = subject;
     
     let sortOption = { createdAt: -1 };
     if(sort === "popular") sortOption = { downloads: -1 };
@@ -150,10 +159,12 @@ const deleteNote = asyncHandler(async (req, res) => {
         throw new Error("Not authorized to delete this note");
     }
 
-    const filePath = path.join(__dirname, "..", note.fileUrl);
-    fs.unlink(filePath, (err) => {
-        if(err) console.warn("File already removed or not found:", filePath);
-    });
+    if(note.fileId){
+        await deleteFile(note.fileId);
+    } else if(note.fileUrl){
+        // notes uploaded before the move to GridFS
+        fs.unlink(path.join(__dirname, "..", note.fileUrl), () => {});
+    }
 
     await Comment.deleteMany({ note: note._id });
     await note.deleteOne();
@@ -165,7 +176,7 @@ const deleteNote = asyncHandler(async (req, res) => {
 // @route GET /api/notes/:id/download
 // @access Public
 
-const downloadNote = asyncHandler(async (req, res) => {
+const downloadNote = asyncHandler(async (req, res, next) => {
     const note = await Note.findById(req.params.id);
 
     if(!note) {
@@ -173,16 +184,41 @@ const downloadNote = asyncHandler(async (req, res) => {
         throw new Error("Note not found");
     }
 
-    note.downloads += 1;
-    await note.save();
+    const missingMessage = "File missing on server. Please ask the uploader to upload it again.";
 
-    const filePath = path.join(__dirname, "..", note.fileUrl);
+    // Notes stored in MongoDB (GridFS)
+    if(note.fileId){
+        const file = await findFile(note.fileId);
+        if(!file){
+            res.status(404);
+            throw new Error(missingMessage);
+        }
 
-    if(!fs.existsSync(filePath)){
-        res.status(404);
-        throw new Error("File missing on server");
+        await Note.updateOne({ _id: note._id }, { $inc: { downloads: 1 } });
+
+        const asciiName = note.fileName.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "'");
+        res.set({
+            "Content-Type": note.fileType || "application/octet-stream",
+            "Content-Length": file.length,
+            "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(note.fileName)}`,
+        });
+
+        const stream = openDownloadStream(note.fileId);
+        stream.on("error", (err) => {
+            if(!res.headersSent) return next(err);
+            res.destroy(err);
+        });
+        return stream.pipe(res);
     }
 
+    // Legacy notes stored on the server disk
+    const filePath = note.fileUrl ? path.join(__dirname, "..", note.fileUrl) : null;
+    if(!filePath || !fs.existsSync(filePath)){
+        res.status(404);
+        throw new Error(missingMessage);
+    }
+
+    await Note.updateOne({ _id: note._id }, { $inc: { downloads: 1 } });
     res.download(filePath, note.fileName);
 });
 

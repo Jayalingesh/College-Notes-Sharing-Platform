@@ -31,7 +31,10 @@ const noteSchema = new mongoose.Schema(
         tags: [{ type: String, trim: true }],
         fileUrl: {
             type: String,
-            required: true,
+            default: "",
+        },
+        fileId: {
+            type: mongoose.Schema.Types.ObjectId,
         },
         fileName: {
             type: String,
