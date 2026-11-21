@@ -31,10 +31,7 @@ const noteSchema = new mongoose.Schema(
         tags: [{ type: String, trim: true }],
         fileUrl: {
             type: String,
-            default: "",
-        },
-        fileId: {
-            type: mongoose.Schema.Types.ObjectId,
+            required: true,
         },
         fileName: {
             type: String,
@@ -61,6 +58,25 @@ const noteSchema = new mongoose.Schema(
                 ref: "User",
             },
         ],
+        // Staff verification
+        isVerified: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
+        verifiedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        },
+        verifiedAt: {
+            type: Date,
+        },
+        verificationRemark: {
+            type: String,
+            trim: true,
+            maxlength: 200,
+            default: "",
+        },
     },
     { timestamps: true }
 );

@@ -1,6 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
 import PrivateRoute from "./components/PrivateRoute.jsx";
+import StaffRoute from "./components/StaffRoute.jsx";
+import StaffReview from "./pages/StaffReview.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
@@ -41,6 +43,14 @@ function App() {
             <PrivateRoute>
               <Profile />
             </PrivateRoute>
+          }
+        />
+        <Route
+          path="/staff"
+          element={
+            <StaffRoute>
+              <StaffReview />
+            </StaffRoute>
           }
         />
         <Route path="*" element={<NotFound />} />

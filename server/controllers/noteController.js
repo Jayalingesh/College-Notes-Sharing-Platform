@@ -4,7 +4,6 @@ const path = require("path");
 const Note = require("../models/Note");
 const User = require("../models/User");
 const Comment = require("../models/Comment");
-const { saveFile, findFile, openDownloadStream, deleteFile } = require("../utils/gridfs");
 
 // @desc Upload a new note
 // @route POST /api/notes
@@ -23,27 +22,19 @@ const createNote = asyncHandler(async (req, res) => {
         throw new Error("Title, subject, branch and semester are required");
     }
 
-    const fileId = await saveFile(req.file);
-
-    let note;
-    try {
-        note = await Note.create({
-            title,
-            description,
-            subject,
-            branch,
-            semester,
-            tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-            fileId,
-            fileName: req.file.originalname,
-            fileType: req.file.mimetype,
-            fileSize: req.file.size,
-            uploadedBy: req.user._id,
-        });
-    } catch (err) {
-        await deleteFile(fileId); // don't leave an orphan file behind
-        throw err;
-    }
+    const note = await Note.create({
+        title,
+        description,
+        subject,
+        branch,
+        semester,
+        tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+        fileUrl: `/uploads/${req.file.filename}`,
+        fileName: req.file.originalname,
+        fileType: req.file.mimetype,
+        fileSize: req.file.size,
+        uploadedBy: req.user._id,
+    });
 
     const populated = await note.populate("uploadedBy", "name college");
 
@@ -55,7 +46,7 @@ const createNote = asyncHandler(async (req, res) => {
 // @access Public
 
 const getNotes = asyncHandler(async (req, res) => {
-    const { search, branch, semester, subject, sort, page = 1, limit = 12 } = req.query;
+    const { search, branch, semester, subject, sort, verified, page = 1, limit = 12 } = req.query;
 
     const query = {};
 
@@ -64,19 +55,22 @@ const getNotes = asyncHandler(async (req, res) => {
     }
 
     if(branch) query.branch = branch;
-    if(semester) query.semester = semester;
-    if(subject) query.subject = subject;
+    if(semester) query.semester = Number(semester);
+    if(subject) query.subject = new RegExp(subject, "i");
+    if(verified === "true") query.isVerified = true;
     
     let sortOption = { createdAt: -1 };
     if(sort === "popular") sortOption = { downloads: -1 };
     if(sort === "liked") sortOption = { "likes.length": -1 };
     if(sort === "oldest") sortOption = { createdAt: 1 };
+    if(sort === "verified") sortOption = { isVerified: -1, createdAt: -1 };
 
     const skip = (Number(page) - 1) * Number(limit);
 
     const [notes, total] = await Promise.all([
         Note.find(query)
             .populate("uploadedBy", "name college")
+            .populate("verifiedBy", "name")
             .sort(sortOption)
             .skip(skip)
             .limit(Number(limit)),
@@ -97,7 +91,9 @@ const getNotes = asyncHandler(async (req, res) => {
 // @access Public
 
 const getNoteById = asyncHandler(async (req, res) => {
-    const note = await Note.findById(req.params.id).populate("uploadedBy", "name college branch");
+    const note = await Note.findById(req.params.id)
+        .populate("uploadedBy", "name college branch")
+        .populate("verifiedBy", "name");
 
     if(!note) {
         res.status(404);
@@ -159,12 +155,10 @@ const deleteNote = asyncHandler(async (req, res) => {
         throw new Error("Not authorized to delete this note");
     }
 
-    if(note.fileId){
-        await deleteFile(note.fileId);
-    } else if(note.fileUrl){
-        // notes uploaded before the move to GridFS
-        fs.unlink(path.join(__dirname, "..", note.fileUrl), () => {});
-    }
+    const filePath = path.join(__dirname, "..", note.fileUrl);
+    fs.unlink(filePath, (err) => {
+        if(err) console.warn("File already removed or not found:", filePath);
+    });
 
     await Comment.deleteMany({ note: note._id });
     await note.deleteOne();
@@ -176,7 +170,7 @@ const deleteNote = asyncHandler(async (req, res) => {
 // @route GET /api/notes/:id/download
 // @access Public
 
-const downloadNote = asyncHandler(async (req, res, next) => {
+const downloadNote = asyncHandler(async (req, res) => {
     const note = await Note.findById(req.params.id);
 
     if(!note) {
@@ -184,41 +178,16 @@ const downloadNote = asyncHandler(async (req, res, next) => {
         throw new Error("Note not found");
     }
 
-    const missingMessage = "File missing on server. Please ask the uploader to upload it again.";
+    note.downloads += 1;
+    await note.save();
 
-    // Notes stored in MongoDB (GridFS)
-    if(note.fileId){
-        const file = await findFile(note.fileId);
-        if(!file){
-            res.status(404);
-            throw new Error(missingMessage);
-        }
+    const filePath = path.join(__dirname, "..", note.fileUrl);
 
-        await Note.updateOne({ _id: note._id }, { $inc: { downloads: 1 } });
-
-        const asciiName = note.fileName.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "'");
-        res.set({
-            "Content-Type": note.fileType || "application/octet-stream",
-            "Content-Length": file.length,
-            "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(note.fileName)}`,
-        });
-
-        const stream = openDownloadStream(note.fileId);
-        stream.on("error", (err) => {
-            if(!res.headersSent) return next(err);
-            res.destroy(err);
-        });
-        return stream.pipe(res);
-    }
-
-    // Legacy notes stored on the server disk
-    const filePath = note.fileUrl ? path.join(__dirname, "..", note.fileUrl) : null;
-    if(!filePath || !fs.existsSync(filePath)){
+    if(!fs.existsSync(filePath)){
         res.status(404);
-        throw new Error(missingMessage);
+        throw new Error("File missing on server");
     }
 
-    await Note.updateOne({ _id: note._id }, { $inc: { downloads: 1 } });
     res.download(filePath, note.fileName);
 });
 
@@ -282,6 +251,65 @@ const getMyNotes = asyncHandler(async (req, res) => {
     res.json({ success: true, notes });
 });
 
+// @desc Verify / un-verify a note (staff only)
+// @route PUT /api/notes/:id/verify
+// @access Private (admin/staff)
+
+const toggleVerify = asyncHandler(async (req, res) => {
+    const note = await Note.findById(req.params.id);
+
+    if(!note) {
+        res.status(404);
+        throw new Error("Note not found");
+    }
+
+    if(note.isVerified) {
+        note.isVerified = false;
+        note.verifiedBy = undefined;
+        note.verifiedAt = undefined;
+        note.verificationRemark = "";
+    } else {
+        note.isVerified = true;
+        note.verifiedBy = req.user._id;
+        note.verifiedAt = new Date();
+        note.verificationRemark = (req.body.remark || "").toString().trim().slice(0, 200);
+    }
+
+    await note.save();
+    await note.populate("verifiedBy", "name");
+
+    res.json({
+        success: true,
+        isVerified: note.isVerified,
+        verifiedBy: note.verifiedBy || null,
+        verifiedAt: note.verifiedAt || null,
+        verificationRemark: note.verificationRemark,
+    });
+});
+
+// @desc Notes for staff review (pending / verified / all)
+// @route GET /api/notes/review/all?status=pending|verified|all
+// @access Private (admin/staff)
+
+const getReviewNotes = asyncHandler(async (req, res) => {
+    const { status = "pending" } = req.query;
+
+    const query = {};
+    if(status === "pending") query.isVerified = false;
+    if(status === "verified") query.isVerified = true;
+
+    const [notes, pendingCount, verifiedCount] = await Promise.all([
+        Note.find(query)
+            .populate("uploadedBy", "name college")
+            .populate("verifiedBy", "name")
+            .sort({ createdAt: -1 }),
+        Note.countDocuments({ isVerified: false }),
+        Note.countDocuments({ isVerified: true }),
+    ]);
+
+    res.json({ success: true, notes, pendingCount, verifiedCount });
+});
+
 module.exports = {
     createNote,
     getNotes,
@@ -292,4 +320,6 @@ module.exports = {
     toggleLike,
     toggleBookmark,
     getMyNotes,
+    toggleVerify,
+    getReviewNotes,
 };

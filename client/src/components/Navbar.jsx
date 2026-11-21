@@ -26,6 +26,8 @@ export default function Navbar() {
 
                     {user && <NavLink to="/dashboard">My notes</NavLink>}
 
+                    {user?.role === "admin" && <NavLink to="/staff">Staff review</NavLink>}
+
                     {user ? (
                         <>
                             <Link to="/profile" className="nav-avatar" title={user.name}>

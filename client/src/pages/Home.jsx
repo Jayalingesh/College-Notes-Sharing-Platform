@@ -15,6 +15,7 @@ export default function Home(){
         branch: "",
         semester: "",
         sort: "newest",
+        verified: false,
     });
 
     useEffect(() => {

@@ -31,7 +31,16 @@ export default function SearchFilter({ filters, onChange }) {
                 <option value="newest">Newest first</option>
                 <option value="popular">Most downloaded</option>
                 <option value="oldest">Oldest first</option>
+                <option value="verified">Verified first</option>
             </select>
+            <label className="check-filter">
+                <input
+                    type="checkbox"
+                    checked={!!filters.verified}
+                    onChange={(e) => update("verified", e.target.checked)}
+                />
+                Staff verified only
+            </label>
         </div>
     );
 }

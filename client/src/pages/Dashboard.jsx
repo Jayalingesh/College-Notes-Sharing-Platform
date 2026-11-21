@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios";
+import VerifiedBadge from "../components/VerifiedBadge.jsx";
 
 export default function Dashboard(){
     const [notes, setNotes] = useState([]);
@@ -64,6 +65,7 @@ export default function Dashboard(){
                                 <div className="dash-row-main">
                                     <div className="note-title" style={{ fontSize: 16 }}>
                                         <Link to={`/notes/${note._id}`}>{note.title}</Link>
+                                        {note.isVerified ? <VerifiedBadge /> : <span className="pending-badge">Pending review</span>}
                                     </div>
                                     <div className="note-meta">
                                         {note.subject} <span className="sep">·</span> {note.downloads || 0} downloads{"  "}

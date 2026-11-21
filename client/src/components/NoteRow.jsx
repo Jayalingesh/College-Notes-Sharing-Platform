@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import VerifiedBadge from "./VerifiedBadge.jsx";
 
 export default function NoteRow({ note }){
     return (
@@ -6,6 +7,7 @@ export default function NoteRow({ note }){
             <div className="note-row-main">
                 <div className="note-title">
                     <Link to={`/notes/${note._id}`}>{note.title}</Link>
+                    {note.isVerified && <VerifiedBadge />}
                 </div>
                 <div className="note-meta">
                     {note.subject}

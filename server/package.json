@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "make-staff": "node scripts/makeStaff.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

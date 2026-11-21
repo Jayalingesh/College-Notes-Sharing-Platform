@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext.jsx";
 import CommentSection from "../components/CommentSection.jsx";
+import VerifiedBadge from "../components/VerifiedBadge.jsx";
 
 function formatSize(bytes){
     if(!bytes) return "";
@@ -41,7 +42,7 @@ export default function NoteDetails(){
     };
 
     const handleDownload = () => {
-        window.open(`${api.defaults.baseURL}/notes/${id}/download`, "_blank");
+        window.open(`/api/notes/${id}/download`, "_blank");
         setNote((n) => ({ ...n, downloads: (n.downloads || 0) + 1 }));
     };
 
@@ -53,6 +54,27 @@ export default function NoteDetails(){
         const res = await api.put(`/notes/${id}/like`);
         setLiked(res.data.liked);
         setLikesCount(res.data.likesCount);
+    };
+
+    const handleVerify = async () => {
+        let remark = "";
+        if(!note.isVerified) {
+            const input = window.prompt("Add a short remark for students (optional):", "");
+            if(input === null) return;
+            remark = input;
+        }
+        try {
+            const res = await api.put(`/notes/${id}/verify`, { remark });
+            setNote((n) => ({
+                ...n,
+                isVerified: res.data.isVerified,
+                verifiedBy: res.data.verifiedBy,
+                verifiedAt: res.data.verifiedAt,
+                verificationRemark: res.data.verificationRemark,
+            }));
+        } catch(err) {
+            alert(err.response?.data?.message || "Could not update verification");
+        }
     };
 
     const handleDelete = async () => {
@@ -71,6 +93,7 @@ export default function NoteDetails(){
     if(!note) return null;
 
     const isOwner = user && note.uploadedBy?._id === user.id;
+    const isStaff = user?.role === "admin";
 
     return (
         <div className="page">
@@ -80,6 +103,18 @@ export default function NoteDetails(){
                         {note.subject} · {note.branch} · Semester {note.semester}
                     </div>
                     <h1>{note.title}</h1>
+                    {note.isVerified && (
+                        <div className="verified-box">
+                            <VerifiedBadge />
+                            <span>
+                                Checked by {note.verifiedBy?.name || "staff"}
+                                {note.verifiedAt ? ` on ${new Date(note.verifiedAt).toLocaleDateString()}` : ""}
+                            </span>
+                            {note.verificationRemark && (
+                                <div className="verified-remark">“{note.verificationRemark}”</div>
+                            )}
+                        </div>
+                    )}
                     {note.description && <p style={{ color: "var(--ink-soft)" }}>{note.description}</p>}
                     <div style={{ fontSize: 13.5, color: "var(--ink-soft)" }}>
                         Uploaded by {note.uploadedBy?.name || "Unknown"}
@@ -113,6 +148,14 @@ export default function NoteDetails(){
                         <button className="btn btn-sm" onClick={handleLike}>
                             {liked ? "♥ Liked" : "♡ Like"} ({likesCount})
                         </button>
+                        {isStaff && (
+                            <button
+                                className={`btn btn-sm ${note.isVerified ? "btn-ghost" : "btn-highlight"}`}
+                                onClick={handleVerify}
+                            >
+                                {note.isVerified ? "Remove verification" : "✔ Verify this note"}
+                            </button>
+                        )}
                         {isOwner && (
                             <>
                                 <button className="btn btn-sm btn-ghost" onClick={() => navigate("/dashboard")}>
