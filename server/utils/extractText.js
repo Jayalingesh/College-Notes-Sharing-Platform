@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { findFile, openDownloadStream } = require("./gridfs");
 
 const MAX_CHARS = 60000; // keeps requests fast and inside free-tier limits
 const MIN_PDF_TEXT = 200; // fewer characters than this = probably a scanned PDF
@@ -31,17 +32,39 @@ const clean = (text) =>
         .replace(/\n{3,}/g, "\n\n")
         .trim();
 
+// Reads the note's file as a Buffer: from MongoDB (GridFS) for current notes,
+// or from the server disk for very old notes uploaded before GridFS.
+const readNoteFile = async (note) => {
+    const missing = httpError(410, "The original file is no longer stored, so AI tools can't read it");
+
+    if(note.fileId) {
+        const file = await findFile(note.fileId);
+        if(!file) throw missing;
+
+        return new Promise((resolve, reject) => {
+            const chunks = [];
+            openDownloadStream(note.fileId)
+                .on("data", (chunk) => chunks.push(chunk))
+                .on("error", reject)
+                .on("end", () => resolve(Buffer.concat(chunks)));
+        });
+    }
+
+    if(note.fileUrl) {
+        const filePath = path.join(__dirname, "..", note.fileUrl);
+        if(fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+            return fs.readFileSync(filePath);
+        }
+    }
+
+    throw missing;
+};
+
 // Returns { text } for readable text, or { inline: { mime_type, data } }
 // when the file has to be read by the AI model itself (images, scanned PDFs).
 const extractNoteContent = async (note) => {
-    const filePath = path.join(__dirname, "..", note.fileUrl);
-
-    if(!fs.existsSync(filePath)) {
-        throw httpError(410, "The original file is no longer on the server, so AI tools can't read it");
-    }
-
-    const ext = path.extname(note.fileName || filePath).toLowerCase();
-    const buffer = fs.readFileSync(filePath);
+    const buffer = await readNoteFile(note);
+    const ext = path.extname(note.fileName || "").toLowerCase();
 
     if(ext === ".txt") {
         return { text: clean(buffer.toString("utf8")).slice(0, MAX_CHARS) };
