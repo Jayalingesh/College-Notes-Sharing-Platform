@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import NoteRow from "../components/NoteRow.jsx";
+import { Link } from "react-router-dom";
 import SearchFilter from "../components/SearchFilter.jsx";
 
 export default function Home(){
@@ -73,6 +74,9 @@ export default function Home(){
                         <p>
                             Try a different subject, branch, or semester — or be the first to upload one.
                         </p>
+                        <Link to="/requests/new" className="btn btn-sm btn-highlight" style={{ marginTop: 12 }}>
+                            Request these notes
+                        </Link>
                     </div>
                 ): (
                     <>

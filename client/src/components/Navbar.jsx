@@ -22,6 +22,8 @@ export default function Navbar() {
                         Browse
                     </NavLink>
 
+                    <NavLink to="/requests">Requests</NavLink>
+
                     {user && <NavLink to="/upload">Upload</NavLink>}
 
                     {user && <NavLink to="/dashboard">My notes</NavLink>}

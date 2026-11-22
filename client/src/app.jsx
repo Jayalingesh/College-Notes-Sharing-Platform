@@ -3,6 +3,9 @@ import Navbar from "./components/Navbar.jsx";
 import PrivateRoute from "./components/PrivateRoute.jsx";
 import StaffRoute from "./components/StaffRoute.jsx";
 import StaffReview from "./pages/StaffReview.jsx";
+import Requests from "./pages/Requests.jsx";
+import NewRequest from "./pages/NewRequest.jsx";
+import RequestDetail from "./pages/RequestDetail.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
@@ -21,6 +24,16 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/notes/:id" element={<NoteDetail />} />
+        <Route path="/requests" element={<Requests />} />
+        <Route
+          path="/requests/new"
+          element={
+            <PrivateRoute>
+              <NewRequest />
+            </PrivateRoute>
+          }
+        />
+        <Route path="/requests/:id" element={<RequestDetail />} />
         <Route
           path="/upload"
           element={

@@ -623,3 +623,48 @@ button {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+/* ---------- Notes request board ---------- */
+.req-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 9px;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #7a5a00;
+  background: #fdf3cc;
+  border: 1px solid var(--highlighter-dim);
+  border-radius: 20px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.req-badge.solved {
+  color: var(--chalkboard);
+  background: #e4f0e8;
+  border-color: #b7d4c2;
+}
+
+.offer-box {
+  margin-top: 28px;
+  padding: 18px 20px;
+  background: var(--paper-dim);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.offer-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.offer-form select {
+  flex: 1;
+  min-width: 220px;
+  padding: 9px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: #fff;
+}

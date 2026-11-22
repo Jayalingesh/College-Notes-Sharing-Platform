@@ -4,6 +4,7 @@ const path = require("path");
 const Note = require("../models/Note");
 const User = require("../models/User");
 const Comment = require("../models/Comment");
+const Request = require("../models/Request");
 
 // @desc Upload a new note
 // @route POST /api/notes
@@ -161,6 +162,8 @@ const deleteNote = asyncHandler(async (req, res) => {
     });
 
     await Comment.deleteMany({ note: note._id });
+    // remove this note from any request it was offered for
+    await Request.updateMany({}, { $pull: { fulfillments: { note: note._id } } });
     await note.deleteOne();
 
     res.json({ success: true, message: "Note deleted successfully" });

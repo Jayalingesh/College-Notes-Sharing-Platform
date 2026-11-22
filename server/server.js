@@ -8,6 +8,7 @@ const { notFound, errorHandler } = require("./middleware/errorHandler");
 const authRoutes = require("./routes/authRoutes");
 const noteRoutes = require("./routes/noteRoutes");
 const commentRoutes = require("./routes/commentRoutes");
+const requestRoutes = require("./routes/requestRoutes");
 
 connectDB();
 
@@ -32,6 +33,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/comments", commentRoutes);
+app.use("/api/requests", requestRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
