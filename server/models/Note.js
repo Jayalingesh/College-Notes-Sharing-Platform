@@ -1,5 +1,32 @@
 const mongoose = require("mongoose");
 
+// AI generated study material (loaded only when asked for)
+const aiSummarySchema = new mongoose.Schema(
+    {
+        summary: String,
+        keyPoints: [String],
+        keyTerms: [{ term: String, meaning: String, _id: false }],
+        generatedAt: Date,
+    },
+    { _id: false }
+);
+
+const aiQuizSchema = new mongoose.Schema(
+    {
+        questions: [
+            {
+                question: String,
+                options: [String],
+                answerIndex: Number,
+                explanation: String,
+                _id: false,
+            },
+        ],
+        generatedAt: Date,
+    },
+    { _id: false }
+);
+
 const noteSchema = new mongoose.Schema(
     {
         title: {
@@ -77,6 +104,9 @@ const noteSchema = new mongoose.Schema(
             maxlength: 200,
             default: "",
         },
+        // AI study tools (kept out of normal queries)
+        aiSummary: { type: aiSummarySchema, select: false },
+        aiQuiz: { type: aiQuizSchema, select: false },
     },
     { timestamps: true }
 );

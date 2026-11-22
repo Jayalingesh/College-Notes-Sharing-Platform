@@ -13,6 +13,7 @@ const {
     getReviewNotes,
 } = require("../controllers/noteController");
 const { addComment } = require("../controllers/commentController");
+const { getAiStudy, generateSummary, generateQuiz } = require("../controllers/aiController");
 const { protect, adminOnly } = require("../middleware/auth");
 const upload = require("../middleware/upload");
 
@@ -36,6 +37,9 @@ router.get("/:id/download", downloadNote);
 router.put("/:id/like", protect, toggleLike);
 router.put("/:id/bookmark", protect, toggleBookmark);
 router.put("/:id/verify", protect, adminOnly, toggleVerify);
+router.get("/:id/ai", getAiStudy);
+router.post("/:id/ai/summary", protect, generateSummary);
+router.post("/:id/ai/quiz", protect, generateQuiz);
 router.post("/:id/comments", protect, addComment);
 
 module.exports = router;

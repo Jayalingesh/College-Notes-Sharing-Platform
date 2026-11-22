@@ -4,6 +4,7 @@ import api from "../api/axios";
 import { useAuth } from "../context/AuthContext.jsx";
 import CommentSection from "../components/CommentSection.jsx";
 import VerifiedBadge from "../components/VerifiedBadge.jsx";
+import AiStudyTools from "../components/AiStudyTools.jsx";
 
 function formatSize(bytes){
     if(!bytes) return "";
@@ -168,6 +169,8 @@ export default function NoteDetails(){
                         )}
                     </div>
                 </div>
+
+                <AiStudyTools noteId={note._id} ownerId={note.uploadedBy?._id} />
 
                 <CommentSection
                     noteId={id}
